@@ -25,7 +25,9 @@ class HotNewsProvider {
     private let kLimitKey = "limit"
     private let kLimitValue = 5
     private let kAfterKey = "after"
-    private let kAfterValue = ""
+    private var kAfterValue = ""
+    private let kCountKey = "count"
+    private var kCountValue = 0
     
     //MARK: - Singleton
     
@@ -33,25 +35,30 @@ class HotNewsProvider {
     
     //MARK: - Public Methods
     
-    func hotNews(completion: @escaping HotNewsCallback) {
+    func hotNews(isInitialFetch: Bool = false, completion: @escaping HotNewsCallback) {
         let alamofire = APIProvider.shared.sessionManager
         let requestString = APIProvider.shared.baseURL() + kHotNewsEndpoint
         
-        let parameters: Parameters = [ kLimitKey : kLimitValue,
+        var parameters: Parameters = [ kLimitKey : kLimitValue,
                                        kAfterKey : kAfterValue ]
+        
+        if isInitialFetch {
+            parameters.updateValue(kCountValue, forKey: kCountKey)
+        }
         
         do {
             let requestURL = try requestString.asURL()
             
             let headers: HTTPHeaders = APIProvider.shared.baseHeader()
             
-            alamofire.request(requestURL, method: .get, parameters: parameters, encoding: URLEncoding.queryString, headers: headers).responseJSON { (response) in
-                
+            alamofire.request(requestURL, method: .get, parameters: parameters, encoding: URLEncoding.queryString, headers: headers).responseJSON {[weak self] (response) in
+                guard let self = self else { return }
                 switch response.result {
                 case .success:
                     
                     guard let hotNewsDict = response.result.value as? [String: AnyObject],
-                          let dictArray = hotNewsDict["data"]?["children"] as? [[String: AnyObject]] else {
+                          let dictArray = hotNewsDict["data"]?["children"] as? [[String: AnyObject]],
+                          let newAfterValue = hotNewsDict["data"]?[self.kAfterKey] as? String else {
                         completion { return [HotNews]() }
                         return
                     }
@@ -69,6 +76,8 @@ class HotNewsProvider {
                         
                         hotNewsArray.append(hotNews)
                     }
+
+                    self.updatePaginationValues(afterValue: newAfterValue)
                     
                     completion { return hotNewsArray }
                     break
@@ -129,5 +138,14 @@ class HotNewsProvider {
         } catch {
             completion { throw error }
         }
+    }
+}
+
+
+//Helper methods
+extension HotNewsProvider {
+    private func updatePaginationValues(afterValue: String) {
+        kAfterValue = afterValue
+        kCountValue += kLimitValue
     }
 }

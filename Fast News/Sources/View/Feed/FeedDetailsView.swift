@@ -9,24 +9,35 @@ import UIKit
 
 class FeedDetailsView: UIView {
     
+    //MARK: - Constants
+    private let feedCellHeight: CGFloat = 400.0
+    private let commentCellHeight: CGFloat = 100.0
+    
+    private let feedCellReuseIdentifier = "FeedCell"
+    private let commentCellReuseIdentifier = "CommentCell"
+    
     //MARK: - Properties
     
     @IBOutlet weak var tableView: UITableView!
-    var viewModels: [TypeProtocol] = [TypeProtocol]() {
+    private(set) var viewModels: [TypeProtocol] = [TypeProtocol]() {
         didSet {
-            tableView.reloadData()
+            tableView.beginUpdates()
+            tableView.insertRows(at: Utils.getIndexPaths(for: viewModels, in: tableView), with: .automatic)
+            tableView.endUpdates()
         }
     }
-    var delegate: FeedViewDelegate?
+    private var delegate: FeedViewDelegate?
     
     //MARK: - Public Methods
     
     func setup(with viewModels: [TypeProtocol], and delegate: FeedViewDelegate) {
-        tableView.estimatedRowHeight = 400
+        tableView.estimatedRowHeight = feedCellHeight
         tableView.rowHeight = UITableView.automaticDimension
         
-        tableView.register(UINib(nibName: "FeedCell", bundle: Bundle.main), forCellReuseIdentifier: "FeedCell")
-        tableView.register(UINib(nibName: "CommentCell", bundle: Bundle.main), forCellReuseIdentifier: "CommentCell")
+        tableView.register(UINib(nibName: "FeedCell", bundle: Bundle.main),
+                           forCellReuseIdentifier: feedCellReuseIdentifier)
+        tableView.register(UINib(nibName: "CommentCell", bundle: Bundle.main),
+                           forCellReuseIdentifier: commentCellReuseIdentifier)
         
         self.delegate = delegate
         tableView.delegate = self
@@ -34,6 +45,11 @@ class FeedDetailsView: UIView {
         
         self.viewModels = viewModels
     }
+    
+    func updateViewModels(with viewModels: [TypeProtocol]) {
+        self.viewModels = viewModels
+    }
+    
 }
 
 extension FeedDetailsView: UITableViewDelegate, UITableViewDataSource {
@@ -50,13 +66,13 @@ extension FeedDetailsView: UITableViewDelegate, UITableViewDataSource {
         
         switch viewModel.type {
         case .hotNews:
-            guard let cell = tableView.dequeueReusableCell(withIdentifier: "FeedCell", for: indexPath) as? FeedCell else { fatalError("Cell is not of type FeedCell!") }
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: feedCellReuseIdentifier, for: indexPath) as? FeedCell else { fatalError("Cell is not of type FeedCell!") }
             
             cell.setup(viewModel: viewModel)
             
             return cell
         case .comment:
-            guard let cell = tableView.dequeueReusableCell(withIdentifier: "CommentCell", for: indexPath) as? CommentCell else { fatalError("Cell is not of type CommentCell!") }
+            guard let cell = tableView.dequeueReusableCell(withIdentifier: commentCellReuseIdentifier, for: indexPath) as? CommentCell else { fatalError("Cell is not of type CommentCell!") }
             
             cell.setup(viewModel: viewModel)
             
@@ -67,9 +83,9 @@ extension FeedDetailsView: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         switch viewModels[indexPath.row].type {
         case .hotNews:
-            return 400.0
+            return feedCellHeight
         default:
-            return 100.0
+            return commentCellHeight
         }
     }
     

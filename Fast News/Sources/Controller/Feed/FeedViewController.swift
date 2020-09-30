@@ -16,14 +16,20 @@ class FeedViewController: UIViewController {
     
     //MARK: - Properties
     
+    private var initialLoad = true
+    
     var hotNews: [HotNews] = [HotNews]() {
         didSet {
             var viewModels: [HotNewsViewModel] = [HotNewsViewModel]()
             _ = hotNews.map { (news) in
                 viewModels.append(HotNewsViewModel(hotNews: news))
             }
-            
-            self.mainView.setup(with: viewModels, and: self)
+            if initialLoad {
+                initialLoad = false
+                self.mainView.setup(with: viewModels, delegate: self, and: self)
+            } else {
+                self.mainView.updateViewModels(with: viewModels)
+            }
         }
     }
     
@@ -40,15 +46,7 @@ class FeedViewController: UIViewController {
         navigationItem.title = "Fast News"
         navigationController?.navigationBar.prefersLargeTitles = true
         
-        HotNewsProvider.shared.hotNews { (completion) in
-            do {
-                let hotNews = try completion()
-                
-                self.hotNews = hotNews
-            } catch {
-                print(error.localizedDescription)
-            }
-        }
+        self.fetchHotNews()
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -62,5 +60,28 @@ class FeedViewController: UIViewController {
 extension FeedViewController: FeedViewDelegate {
     func didTouch(cell: FeedCell, indexPath: IndexPath) {
         self.performSegue(withIdentifier: kToDetails, sender: self.mainView.viewModels[indexPath.row])
+    }
+}
+
+extension FeedViewController: UpdateDataDelegate {
+    func updateData() {
+        self.fetchHotNews()
+    }
+}
+
+extension FeedViewController {
+    private func fetchHotNews() {
+        HotNewsProvider.shared.hotNews(isInitialFetch: initialLoad) { (completion) in
+            do {
+                let hotNews = try completion()
+                if self.initialLoad {
+                    self.hotNews = hotNews
+                } else {
+                    self.hotNews.append(contentsOf: hotNews)
+                }
+            } catch {
+                print(error.localizedDescription)
+            }
+        }
     }
 }

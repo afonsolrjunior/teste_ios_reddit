@@ -11,29 +11,52 @@ protocol FeedViewDelegate {
     func didTouch(cell: FeedCell, indexPath: IndexPath)
 }
 
+protocol UpdateDataDelegate {
+    func updateData()
+}
+
 class FeedView: UIView {
+    
+    //MARK: - Constants
+    private let cellHeight: CGFloat = 260.0
+    private let reuseIdentifier = "FeedCell"
     
     //MARK: - Properties
     
     @IBOutlet weak var tableView: UITableView!
-    var viewModels: [HotNewsViewModel] = [HotNewsViewModel]() {
+    private(set) var viewModels: [HotNewsViewModel] = [HotNewsViewModel]() {
         didSet {
-            tableView.reloadData()
+            tableView.beginUpdates()
+            tableView.insertRows(at: Utils.getIndexPaths(for: viewModels, in: tableView), with: .automatic)
+            tableView.endUpdates()
         }
+        
     }
-    var delegate: FeedViewDelegate?
+    private var delegate: FeedViewDelegate?
+    private var dataDelegate: UpdateDataDelegate?
+    
+    private var isLoading = false
     
     //MARK: - Public Methods
     
-    func setup(with viewModels: [HotNewsViewModel], and delegate: FeedViewDelegate) {
-        tableView.register(UINib(nibName: "FeedCell", bundle: Bundle.main), forCellReuseIdentifier: "FeedCell")
+    func setup(with viewModels: [HotNewsViewModel], delegate: FeedViewDelegate, and updateDataDelegate: UpdateDataDelegate) {
+        tableView.estimatedRowHeight = cellHeight
+        tableView.rowHeight = UITableView.automaticDimension
+        
+        tableView.register(UINib(nibName: "FeedCell", bundle: Bundle.main), forCellReuseIdentifier: reuseIdentifier)
         
         self.delegate = delegate
+        self.dataDelegate = updateDataDelegate
         tableView.delegate = self
         tableView.dataSource = self
         
         self.viewModels = viewModels
     }
+    
+    func updateViewModels(with viewModels: [HotNewsViewModel]) {
+        self.viewModels = viewModels
+    }
+    
 }
 
 extension FeedView: UITableViewDelegate, UITableViewDataSource {
@@ -46,7 +69,7 @@ extension FeedView: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "FeedCell", for: indexPath) as? FeedCell else { fatalError("Cell is not of type FeedCell!") }
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath) as? FeedCell else { fatalError("Cell is not of type FeedCell!") }
         
         cell.setup(hotNewsViewModel: viewModels[indexPath.row])
         
@@ -54,7 +77,7 @@ extension FeedView: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 260.0
+        return cellHeight
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -62,4 +85,20 @@ extension FeedView: UITableViewDelegate, UITableViewDataSource {
         
         delegate?.didTouch(cell: cell, indexPath: indexPath)
     }
+}
+
+extension FeedView: UIScrollViewDelegate {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.isLoading = false
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if (tableView.contentOffset.y + tableView.frame.size.height) >= tableView.contentSize.height {
+            if !isLoading {
+                isLoading = true
+                self.dataDelegate?.updateData()
+            }
+        }
+    }
+    
 }
