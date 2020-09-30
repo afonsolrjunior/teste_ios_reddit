@@ -11,6 +11,7 @@ class FeedDetailsViewController: UIViewController {
     
     //MARK: - Properties
     
+    var hotNewsProvider: HotNewsProviderProtocol = HotNewsProvider.shared
     var hotNewsViewModel: HotNewsViewModel?
     
     var comments: [Comment] = [Comment]() {
@@ -42,7 +43,7 @@ class FeedDetailsViewController: UIViewController {
         
         navigationItem.largeTitleDisplayMode = .never
         
-        HotNewsProvider.shared.hotNewsComments(id: hotNewsViewModel?.id ?? "") { (completion) in
+        hotNewsProvider.hotNewsComments(id: hotNewsViewModel?.id ?? "") { (completion) in
             do {
                 let comments = try completion()
                 

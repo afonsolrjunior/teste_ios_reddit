@@ -12,8 +12,7 @@ import Alamofire
 typealias HotNewsCallback = ( () throws -> [HotNews]) -> Void
 typealias HotNewsCommentsCallback = ( () throws -> [Comment]) -> Void
 
-class HotNewsProvider {
-    
+class HotNewsProvider: HotNewsProviderProtocol {
     //MARK: - Constants
     
     // Hot News endpoint
@@ -32,6 +31,10 @@ class HotNewsProvider {
     //MARK: - Singleton
     
     static let shared: HotNewsProvider = HotNewsProvider()
+    
+    //MARK: - Properties
+    
+    var environment: Environment = .normal
     
     //MARK: - Public Methods
     

@@ -17,6 +17,7 @@ class FeedViewController: UIViewController {
     //MARK: - Properties
     
     private var initialLoad = true
+    var hotNewsProvider: HotNewsProviderProtocol = HotNewsProvider.shared
     
     var hotNews: [HotNews] = [HotNews]() {
         didSet {
@@ -47,6 +48,7 @@ class FeedViewController: UIViewController {
         navigationController?.navigationBar.prefersLargeTitles = true
         
         self.fetchHotNews()
+        
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
@@ -71,7 +73,7 @@ extension FeedViewController: UpdateDataDelegate {
 
 extension FeedViewController {
     private func fetchHotNews() {
-        HotNewsProvider.shared.hotNews(isInitialFetch: initialLoad) { (completion) in
+        self.hotNewsProvider.hotNews(isInitialFetch: initialLoad) { (completion) in
             do {
                 let hotNews = try completion()
                 if self.initialLoad {
